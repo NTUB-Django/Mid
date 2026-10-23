@@ -19,3 +19,6 @@ jobs:
           python-version: '3.12'
       - run: python tools/check_public.py
       - run: python run.py check
+      - if: runner.os == 'Windows'
+        shell: cmd
+        run: Classroom.bat prepare

@@ -6,11 +6,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = os.environ.get('DJANGO_DEBUG', '1').lower() in {'1', 'true', 'yes'}
 
+secret_path = BASE_DIR / '.local-secret'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY and secret_path.is_file():
+    SECRET_KEY = secret_path.read_text(encoding='utf-8').strip()
 if not SECRET_KEY:
     if not DEBUG:
-        raise RuntimeError('Set DJANGO_SECRET_KEY before running with DJANGO_DEBUG=0.')
-    secret_path = BASE_DIR / '.local-secret'
+        raise RuntimeError('Initialize the project locally before enabling HTTPS access.')
     try:
         descriptor = os.open(secret_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
@@ -22,7 +24,7 @@ if not SECRET_KEY:
     if not SECRET_KEY:
         raise RuntimeError('Local secret file is empty; remove .local-secret and restart.')
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]').split(',') if host.strip()]
 
 INSTALLED_APPS = [
     'simpleui',
@@ -76,7 +78,7 @@ DATABASES = {
     },
 }
 
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

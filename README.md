@@ -20,6 +20,18 @@ Windows 若找不到 python，可使用 `py -3 run.py`，或直接雙擊 `start.
 - SimpleUI 後台：http://127.0.0.1:8000/admin/
 - 按 Ctrl+C 停止。若 8000 已被占用，使用 `python run.py --port 8001`，再開啟 http://127.0.0.1:8001/。
 
+## Windows 單檔啟動
+
+另提供 `Classroom.bat`，可以只把這個檔案帶到學校電腦，雙擊後不需 Git，會下載公開期中版並準備 Python 環境、SQLite、課程及三種展示帳號。若沒有 Python，會嘗試透過 winget 以目前使用者身分安裝 Python 3.12；電腦教室仍須允許下載、安裝及執行 Python。
+
+選單：1 本機啟動（預設）；2 本機加既有 Cloudflare Tunnel；3 更新程式後啟動；4 另建管理員。連接埠預設 8000，也可自行輸入。`Classroom.bat prepare` 只下載與初始化，不開啟網站。
+
+檔案放在 Windows 目前使用者的 `%LOCALAPPDATA%\NTUB-Django-Mid`，更新會保留資料庫與帳號，但會覆蓋程式檔。使用公用電腦完畢後，請自行移除該資料夾內的個人操作資料。
+
+Cloudflare 為選用啟動器功能，不會加入期中業務功能或自動發布 DNS。需先在 Cloudflare 設定既有 Tunnel 網域指向 `http://localhost:8000`（若更換連接埠也要一併調整），啟動時輸入網域及 token。token 不寫入批次檔、磁碟或公開 GitHub，僅交給本次 cloudflared 子程序。程式會下載官方 cloudflared 並核對官方 SHA256。此模式關閉 Django DEBUG、使用 HTTPS Cookie，須從設定的公開 HTTPS 網址登入。關閉時按 Ctrl+C，會停止本次網站與 Tunnel；不會安裝背景常駐服務。
+
+Cloudflare 說明：[Tunnel 執行參數](https://developers.cloudflare.com/tunnel/reference/run-parameters/)。這是課堂暫時展示，不是正式主機部署。
+
 ## 展示帳號
 
 | 身分 | 帳號 | 密碼 | 功能 |
