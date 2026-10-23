@@ -1,5 +1,8 @@
 name: Classroom startup
 on: [push, pull_request, workflow_dispatch]
+env:
+  PYTHONUTF8: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 permissions:
   contents: read
 jobs:
