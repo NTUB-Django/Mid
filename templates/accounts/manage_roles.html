@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}使用者角色與權限管理 · NTUB 個人課表系統{% endblock %}
+{% block content %}
+<div class="page-head page-head-flex">
+  <div>
+    <h1 class="page-title">使用者角色與權限管理</h1>
+    <p class="page-sub">最高管理員專用：支援隨時調整使用者身分（學生端 / 學校端 / 最高管理員）與檢視班級關聯</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn btn-outline" href="{% url 'courses:home' %}">返回管理儀表板</a>
+    <a class="btn btn-primary" href="{% url 'admin:index' %}">Django 後台</a>
+  </div>
+</div>
+
+<section class="panel">
+  <form method="get" action="{% url 'accounts:manage_roles' %}" class="filter-bar">
+    <div class="filter-q">
+      <input type="text" name="q" value="{{ q }}" placeholder="搜尋帳號、姓名..." class="input">
+    </div>
+    <button class="btn btn-primary" type="submit">搜尋</button>
+    {% if q %}
+      <a class="btn btn-outline" href="{% url 'accounts:manage_roles' %}">清除</a>
+    {% endif %}
+  </form>
+
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>帳號 (Username)</th>
+          <th>姓名 (Display Name)</th>
+          <th>目前角色</th>
+          <th>所屬班級</th>
+          <th>最高管理者</th>
+          <th>身分變更操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td><strong>{{ u.username }}</strong></td>
+            <td>{{ u.display_name|default:"—" }}</td>
+            <td>
+              {% if u.is_admin_role %}
+                <span class="badge badge-rejected">{{ u.get_role_display }}</span>
+              {% elif u.is_school_role %}
+                <span class="badge badge-pre">{{ u.get_role_display }}</span>
+              {% else %}
+                <span class="badge badge-selected">{{ u.get_role_display }}</span>
+              {% endif %}
+            </td>
+            <td>{{ u.student_class.full_name|default:"—" }}</td>
+            <td>{% if u.is_superuser %}✔️ 是{% else %}否{% endif %}</td>
+            <td>
+              <form method="post" action="{% url 'accounts:manage_roles' %}" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <select name="role" class="input input-sm" style="display: inline-block; width: auto;">
+                  {% for val, label in roles %}
+                    <option value="{{ val }}" {% if u.role == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-outline">更新身分</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="empty-hint">無符合的使用者帳號。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,326 @@
+from datetime import time
+from django.test import TestCase
+from django.urls import reverse
+
+from accounts.models import User
+from courses.models import Course, Department, EduType, Offering, OfferingSlot, StudentClass
+from selection.models import CustomSchedule, Selection
+from selection.services import (
+    add_course_to_timetable,
+    build_personal_timetable,
+    check_conflicts,
+    check_custom_conflict,
+    get_timetable_stats,
+    import_class_timetable,
+    remove_course_from_timetable,
+)
+
+
+class PersonalTimetableTests(TestCase):
+    def setUp(self):
+
+        self.edu = EduType.objects.create(code="4", name="四技")
+        self.dept = Department.objects.create(edu=self.edu, code="401", name="資訊管理系")
+        self.student_class = StudentClass.objects.create(dept=self.dept, code="40110A", name="資管一甲")
+
+
+        self.student = User.objects.create_user(
+            username="test_student",
+            password="password123",
+            role=User.Role.STUDENT,
+            display_name="測試同學",
+            student_class=self.student_class,
+        )
+
+
+        self.course_a = Course.objects.create(code="CS101", name="程式設計(一)")
+        self.offering_a = Offering.objects.create(course=self.course_a, serial="1", teacher="張老師", capacity=50)
+        self.offering_a.classes.add(self.student_class)
+        self.slot_a1 = OfferingSlot.objects.create(
+            offering=self.offering_a,
+            weekday=1,
+            period="第一節",
+            start=time(8, 10),
+            end=time(9, 0),
+            room="資301",
+        )
+        self.slot_a2 = OfferingSlot.objects.create(
+            offering=self.offering_a,
+            weekday=1,
+            period="第二節",
+            start=time(9, 10),
+            end=time(10, 0),
+            room="資301",
+        )
+
+
+        self.course_b = Course.objects.create(code="MATH101", name="微積分")
+        self.offering_b = Offering.objects.create(course=self.course_b, serial="2", teacher="李老師", capacity=50)
+        self.slot_b = OfferingSlot.objects.create(
+            offering=self.offering_b,
+            weekday=1,
+            period="第二節",
+            start=time(9, 10),
+            end=time(10, 0),
+            room="綜101",
+        )
+
+
+        self.course_c = Course.objects.create(code="ENG101", name="實用英文")
+        self.offering_c = Offering.objects.create(course=self.course_c, serial="3", teacher="王老師", capacity=50)
+        self.offering_c.classes.add(self.student_class)
+        self.slot_c = OfferingSlot.objects.create(
+            offering=self.offering_c,
+            weekday=2,
+            period="第三節",
+            start=time(10, 10),
+            end=time(11, 0),
+            room="育201",
+        )
+
+    def test_empty_timetable_page_includes_mobile_agenda(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("selection:timetable"))
+        self.assertEqual(response.status_code, 200)
+        days = response.context["mobile_timetable_days"]
+        self.assertEqual(len(days), 7)
+        self.assertEqual(sum(day["isToday"] for day in days), 1)
+        self.assertTrue(all(not day["events"] for day in days))
+
+    def test_add_and_remove_course_from_timetable(self):
+        pass
+        code, msg = add_course_to_timetable(self.student, self.offering_a)
+        self.assertEqual(code, "ok")
+        self.assertTrue(Selection.objects.filter(user=self.student, offering=self.offering_a, status="selected").exists())
+
+
+        code2, msg2 = add_course_to_timetable(self.student, self.offering_a)
+        self.assertEqual(code2, "duplicate")
+
+
+        deleted = remove_course_from_timetable(self.student, self.offering_a.id)
+        self.assertTrue(deleted)
+        self.assertFalse(Selection.objects.filter(user=self.student, offering=self.offering_a).exists())
+
+    def test_course_conflict_detection(self):
+        pass
+
+        add_course_to_timetable(self.student, self.offering_a)
+
+
+        conflicts = check_conflicts(self.offering_b, self.student)
+        self.assertTrue(len(conflicts) > 0)
+
+        code, msg = add_course_to_timetable(self.student, self.offering_b)
+        self.assertEqual(code, "conflict")
+        self.assertIn("衝堂", msg)
+
+    def test_custom_schedule_and_conflicts(self):
+        pass
+
+        custom = CustomSchedule.objects.create(
+            user=self.student,
+            title="系學會幹部會議",
+            weekday=3,
+            period="第五節",
+            start=time(13, 30),
+            end=time(14, 20),
+            location="學生活動中心",
+            color="blue",
+        )
+        self.assertEqual(self.student.custom_schedules.count(), 1)
+
+
+        c_conflicts = check_custom_conflict(self.student, 3, time(13, 0), time(14, 0))
+        self.assertTrue(len(c_conflicts) > 0)
+        self.assertIn("系學會幹部會議", c_conflicts[0])
+
+
+        custom.delete()
+        self.assertEqual(self.student.custom_schedules.count(), 0)
+
+    def test_import_class_timetable(self):
+        pass
+
+        res = import_class_timetable(self.student, self.student_class)
+        self.assertEqual(res["added"], 2)
+        self.assertEqual(Selection.objects.filter(user=self.student, status="selected").count(), 2)
+
+
+        res2 = import_class_timetable(self.student, self.student_class)
+        self.assertEqual(res2["added"], 0)
+        self.assertEqual(res2["skipped"], 2)
+
+    def test_build_personal_timetable_grid_and_stats(self):
+        pass
+        add_course_to_timetable(self.student, self.offering_a)
+        CustomSchedule.objects.create(
+            user=self.student,
+            title="圖書館自修",
+            weekday=4,
+            period="第四節",
+            start=time(11, 10),
+            end=time(12, 0),
+            location="圖書館 3F",
+            color="green",
+        )
+
+        tt = build_personal_timetable(self.student, full_grid=True)
+        self.assertIn("periods", tt)
+        self.assertIn("grid", tt)
+        self.assertEqual(tt["total_items"], 3)
+
+        stats = get_timetable_stats(self.student)
+        self.assertEqual(stats["total_courses"], 1)
+        self.assertEqual(stats["total_customs"], 1)
+        self.assertEqual(stats["total_weekly_periods"], 3)
+
+    def test_views_response(self):
+        pass
+        self.client.login(username="test_student", password="password123")
+
+
+        resp = self.client.get(reverse("courses:home"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "今日總覽")
+
+
+        resp = self.client.get(reverse("selection:timetable"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "115學年度 第1學期")
+
+
+        resp = self.client.get(reverse("selection:timetable_print"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "國立臺北商業大學 — 個人每週課表")
+
+
+        resp = self.client.post(reverse("selection:course_add", args=[self.offering_a.id]), follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Selection.objects.filter(user=self.student, offering=self.offering_a).exists())
+
+
+        resp = self.client.post(reverse("selection:course_remove", args=[self.offering_a.id]), follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Selection.objects.filter(user=self.student, offering=self.offering_a).exists())
+
+    def test_idor_protection_on_custom_schedule(self):
+        pass
+        other_student = User.objects.create_user(
+            username="other_student",
+            password="password456",
+            role=User.Role.STUDENT,
+        )
+        other_custom = CustomSchedule.objects.create(
+            user=other_student,
+            title="他人機密行程",
+            weekday=1,
+            start=time(14, 0),
+            end=time(15, 0),
+        )
+
+        self.client.login(username="test_student", password="password123")
+        resp = self.client.post(reverse("selection:custom_schedule_delete", args=[other_custom.id]))
+
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(CustomSchedule.objects.filter(id=other_custom.id).exists())
+
+    def test_update_course_preference(self):
+        pass
+        add_course_to_timetable(self.student, self.offering_a)
+        self.client.login(username="test_student", password="password123")
+
+        resp = self.client.post(
+            reverse("selection:course_update_pref", args=[self.offering_a.id]),
+            {"color": "green", "notes": "期末大專案小組"},
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        sel = Selection.objects.get(user=self.student, offering=self.offering_a)
+        self.assertEqual(sel.color, "green")
+        self.assertEqual(sel.notes, "期末大專案小組")
+
+    def test_view_friend_timetable(self):
+        pass
+        friend = User.objects.create_user(
+            username="friend_lin",
+            password="password789",
+            role=User.Role.STUDENT,
+            display_name="林宇翔",
+            student_class=self.student_class,
+        )
+        add_course_to_timetable(friend, self.offering_a)
+
+        self.client.login(username="test_student", password="password123")
+        resp = self.client.get(reverse("selection:user_timetable", args=[friend.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "林宇翔 的課表")
+        self.assertContains(resp, "程式設計(一)")
+
+    def test_three_roles_and_permissions(self):
+        pass
+        school_staff = User.objects.create_user(
+            username="school_staff",
+            password="staff_password",
+            role=User.Role.SCHOOL,
+            is_staff=True,
+        )
+        admin_user = User.objects.create_user(
+            username="super_admin",
+            password="admin_password",
+            role=User.Role.ADMIN,
+            is_staff=True,
+            is_superuser=True,
+        )
+
+
+        self.client.login(username="school_staff", password="staff_password")
+        resp_school = self.client.get(reverse("courses:home"))
+        self.assertEqual(resp_school.status_code, 200)
+        self.assertContains(resp_school, "學校端（教務處）管理中心")
+
+        resp_class_tt = self.client.get(reverse("courses:class_timetables"))
+        self.assertEqual(resp_class_tt.status_code, 200)
+
+
+        resp_manage = self.client.get(reverse("accounts:manage_roles"))
+        self.assertNotEqual(resp_manage.status_code, 200)
+
+
+        self.client.login(username="super_admin", password="admin_password")
+        resp_admin = self.client.get(reverse("courses:home"))
+        self.assertEqual(resp_admin.status_code, 302)
+        self.assertEqual(resp_admin.url, reverse("selection:console_dashboard"))
+        self.assertEqual(self.client.get(resp_admin.url).status_code, 200)
+
+        resp_admin_backend = self.client.get(reverse("admin:index"))
+        self.assertEqual(resp_admin_backend.status_code, 200)
+
+
+        self.client.login(username="test_student", password="password123")
+        resp_student_blocked = self.client.get(reverse("accounts:manage_roles"))
+        self.assertNotEqual(resp_student_blocked.status_code, 200)
+
+    def test_role_security_and_sqlite_sync(self):
+        pass
+        u = User.objects.create(username="temp_role_user", role=User.Role.ADMIN)
+        self.assertTrue(u.is_staff)
+        self.assertTrue(u.is_superuser)
+
+        u.role = User.Role.SCHOOL
+        u.save()
+        self.assertTrue(u.is_staff)
+        self.assertFalse(u.is_superuser)
+
+        u.role = User.Role.STUDENT
+        u.save()
+        self.assertFalse(u.is_staff)
+        self.assertFalse(u.is_superuser)
+
+    def test_login_page_renders_captcha(self):
+        pass
+        resp = self.client.get(reverse("accounts:login"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "圖片驗證碼")
+        self.assertContains(resp, "captcha")
+        self.assertContains(resp, "js/signin.js")

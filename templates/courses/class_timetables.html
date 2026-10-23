@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load course_tags %}
+{% block title %}全校班級官方課表巡查 · NTUB 個人課表系統{% endblock %}
+{% block content %}
+<div class="page-head page-head-flex">
+  <div>
+    <h1 class="page-title">全校班級官方課表巡查</h1>
+    <p class="page-sub">即時查閱全校 258 個班級的標準排課課表（學制、系所與班級即時連動）</p>
+  </div>
+  {% if user.is_school_role or user.is_admin_role %}
+    <div class="page-head-actions">
+      <a class="btn btn-outline" href="{% url 'selection:console_offerings' %}">名額管理</a>
+    </div>
+  {% endif %}
+</div>
+
+
+<section class="panel">
+  <h2 class="panel-title">選擇欲查閱的班級</h2>
+  <div class="form-row-2" style="margin-bottom: 12px;">
+    <div class="form-group">
+      <label for="filter-inspect-edu">1. 依學制篩選</label>
+      <select id="filter-inspect-edu" class="input">
+        <option value="">-- 全部學制 --</option>
+        {% for edu in all_edus %}
+          <option value="{{ edu.code }}">{{ edu.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="filter-inspect-dept">2. 依系所篩選</label>
+      <select id="filter-inspect-dept" class="input">
+        <option value="">-- 全部系所 --</option>
+        {% for dept in all_depts %}
+          <option value="{{ dept.code }}" data-edu="{{ dept.edu_id }}">{{ dept.edu.name }} - {{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <form method="get" action="{% url 'courses:class_timetables' %}" class="form-grid">
+    <div class="form-group">
+      <label for="id_select_class">3. 選擇班級 *</label>
+      <select id="id_select_class" name="class_id" class="input" onchange="this.form.submit()">
+        <option value="">-- 請選擇班級 --</option>
+        {% for cls in all_classes %}
+          <option value="{{ cls.id }}" data-edu="{{ cls.dept.edu_id }}" data-dept="{{ cls.dept.code }}"
+                  {% if selected_class and selected_class.id == cls.id %}selected{% endif %}>
+            {{ cls.full_name }}（{{ cls.offerings.count }} 門開課）
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <noscript>
+      <button class="btn btn-primary" type="submit">查詢班級課表</button>
+    </noscript>
+  </form>
+</section>
+
+{% if selected_class %}
+  <div class="panel" style="margin-top: 20px;">
+    <div class="panel-head-flex">
+      <div>
+        <h2 class="panel-title">{{ selected_class.full_name }} — 官方每週排課</h2>
+        <p class="panel-sub">班級代碼：{{ selected_class.code }} · 開課總門數：{{ selected_class.offerings.count }} 門</p>
+      </div>
+      <div class="page-head-actions">
+        <a class="btn btn-sm btn-outline" href="javascript:window.print()">🖨️ 列印此班課表</a>
+        {% if user.is_student_role %}
+          <form method="post" action="{% url 'selection:import_class' %}" class="inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="student_class" value="{{ selected_class.id }}">
+            <button class="btn btn-sm btn-primary" type="submit" onclick="return confirm('確定要將此班級的所有課程一鍵帶入您的個人課表嗎？');">
+              📥 一鍵帶入我的個人課表
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include "partials/timetable_grid.html" with timetable=timetable %}
+
+    <h3 style="margin-top: 24px; font-size: 1.05rem;">本班開課科目明細</h3>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>課程代碼</th>
+            <th>序號</th>
+            <th>課程名稱</th>
+            <th>授課教師</th>
+            <th>名額</th>
+            <th>已排課人數</th>
+            <th>上課時間與教室</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for off in selected_class.offerings.all %}
+            <tr>
+              <td>{{ off.course.code }}</td>
+              <td>{{ off.serial }}</td>
+              <td><strong><a href="{% url 'courses:offering_detail' off.id %}">{{ off.course.name }}</a></strong></td>
+              <td>{{ off.teacher|default:"—" }}</td>
+              <td>{{ off.capacity }} 人</td>
+              <td><span class="badge badge-selected">{{ off.selected_count }} 人</span></td>
+              <td>{{ off.slots_summary|default:"未定" }}</td>
+              <td>
+                <a class="btn btn-sm btn-outline" href="{% url 'courses:offering_detail' off.id %}">查看詳情</a>
+                {% if user.is_school_role or user.is_admin_role %}
+                  <a class="btn btn-sm btn-ghost" href="{% url 'courses:offering_roster' off.id %}">學生名冊</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="empty-hint">本班級尚無開課紀錄</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <p class="empty-hint">請由上方選單挑選一個班級以檢視其排課網格。</p>
+{% endif %}
+{% endblock %}
+
+{% block footer_js %}
+<script>
+(function() {
+  var eduSel = document.getElementById('filter-inspect-edu');
+  var deptSel = document.getElementById('filter-inspect-dept');
+  var classSel = document.getElementById('id_select_class');
+
+  function syncCascading() {
+    var edu = eduSel.value;
+    var dept = deptSel.value;
+
+    for (var i = 0; i < deptSel.options.length; i++) {
+      var opt = deptSel.options[i];
+      if (!opt.dataset.edu) continue;
+      opt.hidden = (edu !== '' && opt.dataset.edu !== edu);
+    }
+    if (deptSel.selectedOptions.length && deptSel.selectedOptions[0].hidden) {
+      deptSel.value = '';
+    }
+
+    for (var j = 0; j < classSel.options.length; j++) {
+      var cOpt = classSel.options[j];
+      if (!cOpt.dataset.edu) continue;
+      var matchEdu = (edu === '' || cOpt.dataset.edu === edu);
+      var matchDept = (dept === '' || cOpt.dataset.dept === dept);
+      cOpt.hidden = !(matchEdu && matchDept);
+    }
+    if (classSel.selectedOptions.length && classSel.selectedOptions[0].hidden) {
+      classSel.value = '';
+    }
+  }
+
+  if (eduSel && deptSel && classSel) {
+    eduSel.addEventListener('change', syncCascading);
+    deptSel.addEventListener('change', syncCascading);
+  }
+})();
+</script>
+{% endblock %}

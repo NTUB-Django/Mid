@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load course_tags %}
+{% block title %}選課結果 · NTUB 選課系統{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">選課結果</h1>
+  <p class="page-sub">分發結束後，查看每門課的抽籤結果</p>
+</div>
+
+<section class="panel">
+  <h2 class="panel-title">
+    <span class="badge badge-selected">正取</span>
+    <span class="panel-count">{{ groups.selected|length }}</span>
+  </h2>
+  <div class="course-list" data-stagger>
+    {% for sel in groups.selected %}
+      <a class="course-row" href="{% url 'courses:offering_detail' sel.offering_id %}">
+        <span class="course-name">{{ sel.offering.course.name }}</span>
+        <span class="course-meta">
+          {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+          {{ sel.offering.teacher|default:"待定" }} ·
+          {{ sel.offering.slots_summary }}
+        </span>
+        <span class="badge badge-selected">正取</span>
+      </a>
+    {% empty %}
+      <p class="empty-hint">尚無「正取」的課程。</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">
+    <span class="badge badge-rejected">未選上</span>
+    <span class="panel-count">{{ groups.rejected|length }}</span>
+  </h2>
+  <div class="course-list" data-stagger>
+    {% for sel in groups.rejected %}
+      <a class="course-row" href="{% url 'courses:offering_detail' sel.offering_id %}">
+        <span class="course-name">{{ sel.offering.course.name }}</span>
+        <span class="course-meta">
+          {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+          {{ sel.offering.teacher|default:"待定" }} ·
+          {{ sel.offering.slots_summary }}
+        </span>
+        <span class="badge badge-rejected">未選上</span>
+      </a>
+    {% empty %}
+      <p class="empty-hint">沒有落選紀錄——太棒了！</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2 class="panel-title">
+    <span class="badge badge-pre">預選中</span>
+    <span class="panel-count">{{ groups.pre|length }}</span>
+  </h2>
+  <div class="course-list" data-stagger>
+    {% for sel in groups.pre %}
+      <a class="course-row" href="{% url 'courses:offering_detail' sel.offering_id %}">
+        <span class="course-name">{{ sel.offering.course.name }}</span>
+        <span class="course-meta">
+          {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+          {{ sel.offering.teacher|default:"待定" }} ·
+          {{ sel.offering.slots_summary }}
+        </span>
+        <span class="badge badge-pre">等待分發</span>
+      </a>
+    {% empty %}
+      <p class="empty-hint">目前沒有等待分發的課程。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

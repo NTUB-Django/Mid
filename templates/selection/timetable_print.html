@@ -1,0 +1,197 @@
+{% load static %}
+{% load course_tags %}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ user.display_name|default:user.username }} 的個人課表 · NTUB</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<style>
+  body {
+    background: #fff;
+    color: #111;
+    padding: 24px;
+    font-size: 13px;
+  }
+  .print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid #222;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .print-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+  }
+  .print-meta {
+    font-size: 13px;
+    color: #555;
+  }
+  .print-actions {
+    margin-bottom: 16px;
+  }
+  .timetable {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  .timetable th, .timetable td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    font-size: 12px;
+  }
+  .timetable thead th {
+    background: #f0f0f0;
+    color: #222;
+    font-weight: 700;
+    text-align: center;
+  }
+  .tt-period {
+    background: #fafafa;
+    text-align: center;
+    font-weight: 600;
+    width: 90px;
+  }
+  .tt-cell {
+    height: 60px;
+    vertical-align: top;
+  }
+  .tt-block {
+    border: 1px solid #aaa;
+    border-left: 3px solid #7d2e1d;
+    background: #faf5f3;
+    padding: 4px;
+    border-radius: 3px;
+    margin-bottom: 3px;
+  }
+  .tt-custom-block {
+    border-left-color: #2b5c8f;
+    background: #f0f5fa;
+  }
+  .tt-name {
+    font-weight: 700;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .tt-room, .tt-teacher {
+    display: block;
+    font-size: 11px;
+    color: #444;
+  }
+  .print-course-list {
+    margin-top: 30px;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .print-course-list th, .print-course-list td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 12px;
+  }
+  .print-course-list th {
+    background: #f5f5f5;
+  }
+  @media print {
+    .print-actions {
+      display: none !important;
+    }
+    body {
+      padding: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-actions">
+  <button class="btn btn-primary" onclick="window.print()">🖨️ 列印此課表</button>
+  <button class="btn btn-outline" onclick="window.close()">關閉視窗</button>
+</div>
+
+<div class="print-header">
+  <div>
+    <h1 class="print-title">國立臺北商業大學 — 個人每週課表</h1>
+    <div class="print-meta">
+      學生：<strong>{{ user.display_name|default:user.username }}</strong>
+      {% if user.student_class %} · 班級：{{ user.student_class.full_name }}{% endif %}
+      · 排定課程：{{ stats.total_courses }} 門 · 自訂行程：{{ stats.total_customs }} 項 · 每週總堂數：{{ stats.total_weekly_periods }} 節
+    </div>
+  </div>
+  <div class="print-meta">
+    列印日期：{% now "Y-m-d H:i" %}
+  </div>
+</div>
+
+<table class="timetable">
+  <thead>
+    <tr>
+      <th class="tt-corner">節次</th>
+      <th>星期一</th>
+      <th>星期二</th>
+      <th>星期三</th>
+      <th>星期四</th>
+      <th>星期五</th>
+      <th>星期六</th>
+      <th>星期日</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for period in timetable.periods %}
+      {% with row=timetable.grid|get_item:forloop.counter0 %}
+      <tr>
+        <th class="tt-period">
+          {{ period.0 }}
+          <div style="font-size: 10px; color: #666; font-weight: normal;">{{ period.1|time:"H:i" }}–{{ period.2|time:"H:i" }}</div>
+        </th>
+        {% for i in "1234567"|make_list %}
+          {% with cells=row|get_item:forloop.counter0 %}
+          <td class="tt-cell">
+            {% for cell in cells %}
+              <div class="tt-block {% if cell.is_custom %}tt-custom-block{% endif %}">
+                <span class="tt-name">{{ cell.name }}</span>
+                {% if cell.teacher %}<span class="tt-teacher">{{ cell.teacher }}</span>{% endif %}
+                {% if cell.room %}<span class="tt-room">{{ cell.room }}</span>{% endif %}
+              </div>
+            {% endfor %}
+          </td>
+          {% endwith %}
+        {% endfor %}
+      </tr>
+      {% endwith %}
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">已選課程清單</h3>
+<table class="print-course-list">
+  <thead>
+    <tr>
+      <th>課程代碼</th>
+      <th>序號</th>
+      <th>課程名稱</th>
+      <th>授課教師</th>
+      <th>上課時段與教室</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sel in enrolled_courses %}
+      <tr>
+        <td>{{ sel.offering.course.code }}</td>
+        <td>{{ sel.offering.serial }}</td>
+        <td><strong>{{ sel.offering.course.name }}</strong></td>
+        <td>{{ sel.offering.teacher|default:"—" }}</td>
+        <td>{{ sel.offering.slots_summary|default:"未定" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" style="text-align: center; color: #888;">尚無正式排課</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+</body>
+</html>

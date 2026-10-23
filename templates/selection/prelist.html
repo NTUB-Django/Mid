@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}預選課表 · NTUB 選課系統{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">預選課表</h1>
+  <p class="page-sub">{{ items|length }} 門課等待分發 — 正取的課程之後會移到「我的課表」</p>
+</div>
+
+{% include "partials/timetable_grid.html" with timetable=timetable %}
+
+<section class="panel">
+  <h2 class="panel-title">我的預選清單（{{ items|length }}）</h2>
+  <div class="course-list" data-stagger>
+    {% for sel in items %}
+      <div class="course-row course-row-has-action">
+        <a class="course-row-main" href="{% url 'courses:offering_detail' sel.offering_id %}">
+          <span class="course-name">{{ sel.offering.course.name }}</span>
+          <span class="course-meta">
+            {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+            {{ sel.offering.teacher|default:"待定" }} ·
+            {{ sel.offering.slots_summary }}
+          </span>
+        </a>
+        <form method="post" action="{% url 'selection:pre_remove' sel.offering_id %}" class="inline-form"
+              onsubmit="return confirm('確定要移除這門課嗎？');">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-danger" type="submit">移除</button>
+        </form>
+      </div>
+    {% empty %}
+      <p class="empty-hint">你還沒有預選任何課程。<a href="{% url 'courses:browse' %}">去課程查詢挑課 →</a></p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}管理儀表板 · NTUB 選課系統{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">管理儀表板</h1>
+  <div class="page-actions">
+    {% if total_pre %}
+      <form method="post" action="{% url 'selection:console_run_allocation' %}" class="inline-form">
+        {% csrf_token %}
+        <button class="btn btn-primary" type="submit">執行分發抽籤（{{ total_pre }} 筆預選）</button>
+      </form>
+    {% endif %}
+    <form method="post" action="{% url 'selection:console_reset_allocation' %}" class="inline-form"
+          onsubmit="return confirm('確定要重置所有選課紀錄回「預選中」嗎？此操作無法復原。');">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">一鍵重置分發</button>
+    </form>
+  </div>
+</div>
+
+<section class="stat-grid stat-grid-4" data-stagger>
+  <div class="stat-card"><span class="stat-num">{{ total_offering }}</span><span class="stat-label">開課班別</span></div>
+  <div class="stat-card"><span class="stat-num">{{ total_student }}</span><span class="stat-label">學生帳號</span></div>
+  <div class="stat-card stat-pre"><span class="stat-num">{{ total_pre }}</span><span class="stat-label">預選中</span></div>
+  <div class="stat-card stat-selected"><span class="stat-num">{{ total_selected }}</span><span class="stat-label">正取</span></div>
+</section>
+
+{% if no_allocation and total_pre %}
+  <div class="alert alert-info">目前所有選課都還在「預選中」。準備好後，點右上角「執行分發抽籤」。</div>
+{% endif %}
+
+<div class="split-cols">
+  <section class="panel">
+    <h2 class="panel-title">熱門預選課程 Top 10</h2>
+    {% if hot_offerings %}
+      <table class="data-table">
+        <thead><tr><th>課程</th><th>教師</th><th>預選人數</th><th>名額</th></tr></thead>
+        <tbody>
+        {% for o in hot_offerings %}
+          <tr>
+            <td><a href="{% url 'courses:offering_detail' o.id %}">{{ o.course.name }}</a></td>
+            <td>{{ o.teacher|default:"—" }}</td>
+            <td class="num">{{ o.pre_n }}</td>
+            <td class="num">{{ o.capacity }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-hint">尚無預選紀錄。</p>
+    {% endif %}
+  </section>
+  <section class="panel">
+    <h2 class="panel-title">管理工具</h2>
+    <div class="tool-list" data-stagger>
+      <a class="tool-item" href="{% url 'selection:console_offerings' %}">
+        <strong>名額管理</strong><p>調整每門開課的名額上限，影響分發結果</p>
+      </a>
+      <a class="tool-item" href="{% url 'admin:index' %}">
+        <strong>Django 後台</strong><p>完整的資料管理介面（帳號 / 課程 / 選課紀錄 / 分發動作）</p>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

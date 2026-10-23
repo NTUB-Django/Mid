@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}個人中心 · NTUB 個人課表系統{% endblock %}
+{% block content %}
+<div class="minimal-profile-card">
+  <div class="minimal-profile-header">
+    <div class="profile-avatar-circle">
+      <svg class="profile-avatar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <div class="profile-header-info">
+      <div class="profile-title-row">
+        <h1 class="profile-name">{{ user.display_name|default:user.username }}</h1>
+        <span class="profile-role-badge">
+          {% if user.is_student_role %}
+            在學學生
+          {% elif user.is_school_role %}
+            學校教務端
+          {% else %}
+            系統管理員
+          {% endif %}
+        </span>
+      </div>
+      <div class="profile-school-badge">國立臺北商業大學 · {{ user.student_class.full_name|default:"自由選修學員" }}</div>
+    </div>
+  </div>
+
+  <div class="profile-stats-row">
+    <div class="p-stat-item">
+      <span class="p-stat-val">{{ pre_count }}</span>
+      <span class="p-stat-lbl">預選中課程</span>
+    </div>
+    <div class="p-stat-item p-stat-success">
+      <span class="p-stat-val">{{ selected_count }}</span>
+      <span class="p-stat-lbl">已排入我的課表</span>
+    </div>
+    <div class="p-stat-item p-stat-muted">
+      <span class="p-stat-val">{{ rejected_count }}</span>
+      <span class="p-stat-lbl">未選上／備取</span>
+    </div>
+  </div>
+
+  <div class="profile-detail-section">
+    <h3 class="profile-section-title">學籍與帳號基本資訊</h3>
+    <dl class="profile-info-grid">
+      <div><dt>登入帳號</dt><dd>{{ user.username }}</dd></div>
+      <div><dt>顯示姓名</dt><dd>{{ user.display_name|default:"—" }}</dd></div>
+      <div><dt>班級代碼</dt><dd>{{ user.student_class.code|default:"未綁定" }}</dd></div>
+      <div><dt>所屬學系</dt><dd>{{ user.student_class.dept.name|default:"全校自由選修" }}</dd></div>
+      <div><dt>學制別</dt><dd>{{ user.student_class.dept.edu.name|default:"大學部" }}</dd></div>
+      <div><dt>在學狀態</dt><dd><span class="badge badge-selected">在學中</span></dd></div>
+    </dl>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+.signin-page{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:#f5f6fa;color:#29374e}
+.signin-header{display:flex;align-items:center;justify-content:space-between;padding:24px 40px;gap:24px;background:#fff;border-bottom:1px solid #e8ecf2}
+.signin-page a{color:#3264f4;text-decoration:none}
+.signin-header>a:last-child{font-size:13px;color:#76869b}
+.signin-page .signin-brand{display:inline-flex;align-items:center;gap:10px;color:#2c3e58;font-size:16px;font-weight:800}
+.signin-main{flex:1;display:grid;place-items:center;padding:44px 24px;box-sizing:border-box;width:100%}
+.signin-form-panel{width:100%;max-width:392px;min-width:0}
+.signin-form-panel h1{font-size:30px;font-weight:700;line-height:1.4;letter-spacing:-.03em;margin:0 0 8px;color:#273a57}
+.signin-intro{font-size:14px;line-height:1.8;color:#7a899f;margin:0 0 30px}
+.signin-form{display:grid;gap:20px}
+.signin-field label{display:block;font-size:13px;font-weight:600;margin-bottom:9px;color:#43556f}
+.signin-field input:not([type=hidden]){width:100%;min-width:0;height:48px;box-sizing:border-box;padding:0 14px;border:1px solid #dce3ed;background:#fff;color:#273a57;border-radius:5px;box-shadow:none;font:inherit;font-size:16px;transition:border-color .15s}
+.signin-field input:not([type=hidden]):focus{border-color:#3264f4;outline:2px solid #3264f425;outline-offset:1px;box-shadow:none}
+.signin-field input::placeholder{color:#95a1b3;font-size:13px}
+.signin-password{display:flex;position:relative}
+.signin-password input{padding-right:64px!important}
+.signin-password button{position:absolute;right:8px;top:2px;height:44px;padding:0 8px;background:none;border:0;color:#687e9e;font:inherit;font-size:12px;cursor:pointer}
+.signin-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:16px}
+.signin-label-row label{margin:0}
+.signin-label-row button{border:0;background:none;color:#3264f4;padding:4px 0;font:inherit;font-size:12px;cursor:pointer}
+.signin-captcha{display:flex;align-items:center;gap:12px;min-width:0}
+.signin-captcha .captcha{width:110px;height:36px;object-fit:contain;flex-shrink:0;border:0;cursor:pointer}
+.signin-captcha input:not([type=hidden]){flex:1;min-width:0;width:0;letter-spacing:.08em}
+.signin-remember{display:flex;gap:9px;align-items:center;font-size:13px;color:#677b97;cursor:pointer}
+.signin-remember input{width:16px;height:16px;accent-color:#3264f4}
+.signin-submit{height:48px;border:0;border-radius:5px;background:#3264f4;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.signin-submit:hover{background:#2855db}
+.signin-register{font-size:13px;margin:26px 0 0;padding-top:24px;border-top:1px solid #e1e7ef;color:#8290a4}
+.signin-help{font-size:12px;color:#8796aa;line-height:1.8;margin:14px 0 0}
+.signin-error{font-size:12px;color:#355f9b;line-height:1.6;margin:7px 0 0}
+.signin-error:empty{display:none}
+.signin-notice{border-left:3px solid #3264f4;background:#eaf0ff;color:#395a91;font-size:13px;line-height:1.7;padding:12px 14px;margin:0 0 22px}
+.signin-footer{font-size:11px;color:#8e9bb0;text-align:center;padding:20px 24px}
+.signin-page :is(a,button,input):focus-visible{outline:2px solid #3264f4;outline-offset:3px}
+.signin-page button:disabled{opacity:.6;cursor:wait}
+@media(max-width:600px){.signin-header{padding:18px 24px}.signin-main{padding:36px 24px;align-items:start}.signin-form-panel h1{font-size:27px}.signin-intro{margin-bottom:26px}}
+@media(prefers-reduced-motion:reduce){.signin-page *{transition:none}}

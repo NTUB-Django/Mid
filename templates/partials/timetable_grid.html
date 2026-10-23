@@ -1,0 +1,108 @@
+{% load course_tags static %}
+{% if timetable.periods %}
+<div class="timetable-responsive-shell{% if mobile_timetable_days %} has-mobile-agenda{% endif %}">
+{% if mobile_timetable_days %}
+  {{ mobile_timetable_days|json_script:"mobile-timetable-data" }}
+  <div id="mobile-timetable-root" class="mobile-timetable-root" aria-live="polite"></div>
+  <noscript><p class="mobile-timetable-noscript">目前顯示完整週課表，可左右滑動查看各日。</p></noscript>
+{% endif %}
+<div class="timetable-frame">
+  <div class="timetable-scroll">
+    <table class="timetable timetable-app-grid">
+      <thead>
+        <tr>
+          <th class="tt-corner">節次</th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 1 %}is-today{% endif %}">
+            <span class="tt-day-label">週一</span>
+            {% if stats.today_weekday == 1 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 2 %}is-today{% endif %}">
+            <span class="tt-day-label">週二</span>
+            {% if stats.today_weekday == 2 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 3 %}is-today{% endif %}">
+            <span class="tt-day-label">週三</span>
+            {% if stats.today_weekday == 3 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 4 %}is-today{% endif %}">
+            <span class="tt-day-label">週四</span>
+            {% if stats.today_weekday == 4 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 5 %}is-today{% endif %}">
+            <span class="tt-day-label">週五</span>
+            {% if stats.today_weekday == 5 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 6 %}is-today{% endif %}">
+            <span class="tt-day-label">週六</span>
+            {% if stats.today_weekday == 6 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+          <th class="tt-weekday-head {% if stats.today_weekday == 7 %}is-today{% endif %}">
+            <span class="tt-day-label">週日</span>
+            {% if stats.today_weekday == 7 %}<span class="tt-today-badge">今日</span>{% endif %}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in timetable.periods %}
+          {% with row=timetable.grid|get_item:forloop.counter0 %}
+          <tr>
+            <th class="tt-period">
+              <span class="tt-period-idx">{{ forloop.counter }}</span>
+              <span class="tt-period-name">{{ period.0 }}</span>
+              <small class="tt-period-time">{{ period.1|time:"H:i" }}–{{ period.2|time:"H:i" }}</small>
+            </th>
+            {% for i in "1234567"|make_list %}
+              {% with cells=row|get_item:forloop.counter0 %}
+              <td class="tt-cell">
+                {% for cell in cells %}
+                  {% if cell.is_custom %}
+                    <div class="tt-card tt-card-{{ cell.color|default:'blue' }} tt-custom-card" tabindex="0">
+                      <div class="tt-card-head">
+                        <span class="tt-tag">個人行程</span>
+                        <form method="post" action="{% url 'selection:custom_schedule_delete' cell.id %}" class="inline-form"
+                              onsubmit="return confirm('確定要刪除「{{ cell.name }}」行程嗎？');">
+                          {% csrf_token %}
+                          <button type="submit" class="tt-del-btn" title="刪除行程" aria-label="刪除">×</button>
+                        </form>
+                      </div>
+                      <strong class="tt-name">{{ cell.name }}</strong>
+                      {% if cell.room %}<div class="tt-meta">{{ cell.room }}</div>{% endif %}
+                      {% if cell.notes %}<div class="tt-meta tt-note" title="{{ cell.notes }}">{{ cell.notes }}</div>{% endif %}
+                    </div>
+                  {% else %}
+                    <div class="tt-card tt-card-{{ cell.color|default:'terracotta' }}" tabindex="0">
+                      <a class="tt-link" href="{% url 'courses:offering_detail' cell.offering_id %}">
+                        <div class="tt-card-head">
+                          <span class="tt-tag">{{ cell.code }}</span>
+                        </div>
+                        <strong class="tt-name">{{ cell.name }}</strong>
+                        {% if cell.room %}<div class="tt-meta">{{ cell.room }}</div>{% endif %}
+                        {% if cell.teacher %}<div class="tt-meta">{{ cell.teacher }}</div>{% endif %}
+                        {% if cell.notes %}<div class="tt-meta tt-note" title="{{ cell.notes }}">{{ cell.notes }}</div>{% endif %}
+                      </a>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </td>
+              {% endwith %}
+            {% endfor %}
+          </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% if mobile_timetable_days %}
+  <script defer src="{% static 'js/timetable-mobile.js' %}?v=20261015b"></script>
+{% endif %}
+  </div>
+{% else %}
+<div class="empty-panel">
+  <p class="empty-hint">目前課表中尚無任何排定時段。</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="{% url 'courses:browse' %}">前往全校課程查詢挑課</a>
+    <a class="btn btn-outline" href="#import-class-section">匯入所屬班級課表</a>
+  </div>
+</div>
+{% endif %}

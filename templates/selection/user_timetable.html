@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load course_tags %}
+{% block title %}{{ target_user.display_name|default:target_user.username }} 的課表 · NTUB 個人課表系統{% endblock %}
+{% block content %}
+<p class="breadcrumb">
+  <a href="{% url 'selection:timetable' %}">← 返回我的課表</a>
+</p>
+
+
+<section class="friend-profile-hero">
+  <div class="friend-avatar-wrap">
+    <div class="friend-avatar-circle">
+      {{ target_user.display_name|slice:":1"|default:target_user.username|slice:":1" }}
+    </div>
+  </div>
+  <div class="friend-info">
+    <h1 class="friend-name">{{ target_user.display_name|default:target_user.username }} 的課表</h1>
+    <p class="friend-school">
+      國立臺北商業大學
+      {% if target_user.student_class %} · {{ target_user.student_class.full_name }}{% endif %}
+    </p>
+    <div class="friend-pills">
+      <span class="friend-pill friend-pill-semester">115學年度 第1學期</span>
+      <span class="friend-pill friend-pill-course">{{ stats.total_courses }} 門課</span>
+      <span class="friend-pill friend-pill-credit">{{ stats.total_credits }} 學分</span>
+    </div>
+  </div>
+  <div class="friend-hero-actions">
+    <a class="btn btn-outline" href="{% url 'selection:timetable' %}">回我的課表</a>
+    <button class="btn btn-primary" onclick="window.print()">🖨️ 列印此課表</button>
+  </div>
+</section>
+
+{% include "partials/timetable_grid.html" with timetable=timetable %}
+
+<section class="panel" style="margin-top: 24px;">
+  <h2 class="panel-title">排定課程一覽（{{ enrolled_courses|length }} 門）</h2>
+  <div class="course-list" data-stagger>
+    {% for sel in enrolled_courses %}
+      <div class="course-row">
+        <div class="course-row-main">
+          <span class="course-name">
+            <span class="color-dot color-dot-{{ sel.color }}"></span>
+            {{ sel.offering.course.name }}
+          </span>
+          <span class="course-meta">
+            {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+            {{ sel.offering.teacher|default:"教師待定" }} ·
+            {{ sel.offering.slots_summary }}
+          </span>
+        </div>
+        <a class="btn btn-sm btn-outline" href="{% url 'courses:offering_detail' sel.offering_id %}">查看課程</a>
+      </div>
+    {% empty %}
+      <p class="empty-hint">此同學目前課表中尚無任何排定課程。</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

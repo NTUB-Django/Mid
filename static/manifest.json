@@ -1,0 +1,36 @@
+{
+  "name": "NTUB 個人課表系統",
+  "short_name": "NTUB課表",
+  "description": "國立臺北商業大學個人週課表與選課管理系統",
+  "start_url": "/selection/timetable/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6f5",
+  "theme_color": "#203b49",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "我的課表",
+      "url": "/selection/timetable/",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "課程查詢",
+      "url": "/courses/browse/",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

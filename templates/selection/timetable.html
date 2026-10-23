@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% load static %}
+{% load course_tags %}
+{% block title %}個人課表 · NTUB 個人課表系統{% endblock %}
+{% block content %}
+
+
+<div class="schedule-workspace">
+<header class="schedule-heading"><div><p>個人課表 · 115學年度 第1學期</p><h1>我的課表</h1><span>{{ user.student_class.full_name|default:"課程與個人行程" }}</span></div><a class="schedule-primary" href="{% url 'courses:browse' %}">查詢與加入課程</a></header>
+<div class="schedule-toolbar"><div class="schedule-summary"><span><strong>{{ stats.total_courses }}</strong> 門課</span><span><strong>{{ stats.total_credits }}</strong> 學分</span><span><strong>{{ stats.total_customs }}</strong> 項行程</span></div><nav aria-label="課表工具"><a href="#import-class-section">匯入班級</a><button type="button" id="open-friends-btn">同學課表</button><a href="{% url 'selection:timetable_print' %}" target="_blank" rel="noopener">列印</a><a href="#add-custom">新增行程</a></nav></div>
+{% if not stats.total_courses and not stats.total_customs %}<div class="schedule-onboarding"><p>還沒有課程？先匯入班級課表，再調整選修與個人行程。</p><a href="#import-class-section">選擇班級 →</a></div>{% endif %}
+{% include "partials/timetable_grid.html" with timetable=timetable stats=stats %}
+
+
+
+
+<div id="friends-modal" class="app-modal-backdrop" hidden>
+  <div class="app-modal-card" role="dialog" aria-modal="true" aria-labelledby="friends-title">
+    <div class="app-modal-header">
+      <div>
+        <h2 id="friends-title" class="app-modal-title">好友與同班同學</h2>
+        <p class="app-modal-sub">選擇同學，查看已公開的每週安排。</p>
+      </div>
+      <button type="button" class="app-modal-close" id="close-friends-btn" aria-label="關閉視窗">×</button>
+    </div>
+
+
+    <div class="app-tabs">
+      <button type="button" class="app-tab-btn is-active" id="tab-classmates-btn">
+        同班同學 ({{ classmates|length }})
+      </button>
+      <button type="button" class="app-tab-btn" id="tab-others-btn">
+        跨系同學 ({{ other_friends|length }})
+      </button>
+    </div>
+
+
+    <div class="app-friends-list" id="list-classmates">
+      {% for stu in classmates %}
+        <div class="app-friend-row">
+          <div class="app-friend-avatar">
+            {{ stu.display_name|slice:":1"|default:stu.username|slice:":1" }}
+          </div>
+          <div class="app-friend-info">
+            <strong class="app-friend-name">{{ stu.display_name|default:stu.username }}</strong>
+            <span class="app-friend-dept">{{ stu.student_class.full_name|default:"同班" }}</span>
+          </div>
+          <a href="{% url 'selection:user_timetable' stu.id %}" class="btn btn-sm btn-outline app-view-btn" title="查看課表">
+            查看課表
+          </a>
+        </div>
+      {% empty %}
+        <p class="empty-hint">目前同班尚無其他註冊學生。</p>
+      {% endfor %}
+    </div>
+
+
+    <div class="app-friends-list" id="list-others" hidden>
+      {% for stu in other_friends %}
+        <div class="app-friend-row">
+          <div class="app-friend-avatar app-friend-avatar-other">
+            {{ stu.display_name|slice:":1"|default:stu.username|slice:":1" }}
+          </div>
+          <div class="app-friend-info">
+            <strong class="app-friend-name">{{ stu.display_name|default:stu.username }}</strong>
+            <span class="app-friend-dept">{{ stu.student_class.full_name|default:"全校同學" }}</span>
+          </div>
+          <a href="{% url 'selection:user_timetable' stu.id %}" class="btn btn-sm btn-outline app-view-btn" title="查看課表">
+            查看課表
+          </a>
+        </div>
+      {% empty %}
+        <p class="empty-hint">尚無其他學生帳號。</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="schedule-section-grid">
+
+  <section class="panel">
+    <div class="panel-head-flex">
+      <h2 class="panel-title">已排入課程（{{ enrolled_courses|length }} 門）</h2>
+      <a class="btn btn-sm btn-outline" href="{% url 'courses:browse' %}">＋ 瀏覽更多課程</a>
+    </div>
+    <div class="course-list" data-stagger>
+      {% for sel in enrolled_courses %}
+        <div class="course-row course-row-has-action">
+          <div class="course-row-main">
+            <a href="{% url 'courses:offering_detail' sel.offering_id %}" class="course-row-link">
+              <span class="course-name">
+                <span class="color-dot color-dot-{{ sel.color }}"></span>
+                {{ sel.offering.course.name }}
+              </span>
+              <span class="course-meta">
+                {{ sel.offering.course.code }} 序{{ sel.offering.serial }} ·
+                {{ sel.offering.teacher|default:"待定" }} ·
+                {{ sel.offering.slots_summary }}
+              </span>
+            </a>
+            {% if sel.notes %}
+              <div class="item-personal-note">備註：{{ sel.notes }}</div>
+            {% endif %}
+            <details class="course-pref-accordion">
+              <summary class="pref-summary">自訂卡片顏色與個人備註</summary>
+              <form method="post" action="{% url 'selection:course_update_pref' sel.offering_id %}" class="pref-form">
+                {% csrf_token %}
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>課表卡片色彩</label>
+                    <select name="color" class="input input-sm">
+                      <option value="terracotta" {% if sel.color == "terracotta" %}selected{% endif %}>靛藍（預設）</option>
+                      <option value="blue" {% if sel.color == "blue" %}selected{% endif %}>天青藍</option>
+                      <option value="green" {% if sel.color == "green" %}selected{% endif %}>草木綠</option>
+                      <option value="amber" {% if sel.color == "amber" %}selected{% endif %}>琥珀黃</option>
+                      <option value="purple" {% if sel.color == "purple" %}selected{% endif %}>丁香紫</option>
+                      <option value="slate" {% if sel.color == "slate" %}selected{% endif %}>石墨灰</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>個人備註說明</label>
+                    <input type="text" name="notes" class="input input-sm" value="{{ sel.notes }}" placeholder="例如：期中報告、實驗室助教">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline">儲存設定</button>
+              </form>
+            </details>
+          </div>
+          <div class="course-row-side-actions">
+            <form method="post" action="{% url 'selection:course_remove' sel.offering_id %}" class="inline-form"
+                  onsubmit="return confirm('確定要將「{{ sel.offering.course.name }}」從個人課表移除嗎？');">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-danger" type="submit">移出課表</button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <p class="empty-hint">尚未加入任何課程。<a href="{% url 'courses:browse' %}">去全校課程查詢挑課 →</a> 或在下方一鍵匯入班級課表！</p>
+      {% endfor %}
+    </div>
+  </section>
+
+
+  <section class="panel" id="custom-schedules">
+    <div class="panel-head-flex">
+      <h2 class="panel-title">自訂個人行程（{{ custom_schedules|length }} 項）</h2>
+      <a class="btn btn-sm btn-outline" href="#add-custom">＋ 新增行程</a>
+    </div>
+    <div class="course-list" data-stagger>
+      {% for c in custom_schedules %}
+        <div class="course-row course-row-has-action">
+          <div class="course-row-main">
+            <span class="course-name">
+              <span class="color-dot color-dot-{{ c.color }}"></span>
+              {{ c.title }}
+              <span class="badge badge-info">{{ c.get_weekday_display }}</span>
+            </span>
+            <span class="course-meta">
+              {{ c.start|time:"H:i" }}–{{ c.end|time:"H:i" }}
+              {% if c.period %}（{{ c.period }}）{% endif %}
+              {% if c.location %} · 地點：{{ c.location }}{% endif %}
+            </span>
+            {% if c.note %}
+              <div class="item-personal-note">說明：{{ c.note }}</div>
+            {% endif %}
+          </div>
+          <form method="post" action="{% url 'selection:custom_schedule_delete' c.id %}" class="inline-form"
+                onsubmit="return confirm('確定要刪除「{{ c.title }}」此行程嗎？');">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit">刪除</button>
+          </form>
+        </div>
+      {% empty %}
+        <p class="empty-hint">目前沒有個人行程，可在下方新增。</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="schedule-section-grid">
+
+  <section class="panel" id="add-custom">
+    <h2 class="panel-title">新增個人行程</h2>
+    <p class="panel-sub">設定時間與地點，加入前會檢查是否與既有課程衝突。</p>
+
+
+    <div class="period-presets-bar">
+      <span class="preset-label">節次快速套用：</span>
+      <div class="preset-buttons">
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第一節" data-start="08:10" data-end="09:00">第 1 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第二節" data-start="09:10" data-end="10:00">第 2 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第三節" data-start="10:10" data-end="11:00">第 3 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第四節" data-start="11:10" data-end="12:00">第 4 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第五節" data-start="13:30" data-end="14:20">第 5 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第六節" data-start="14:25" data-end="15:15">第 6 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第七節" data-start="15:25" data-end="16:15">第 7 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第八節" data-start="16:20" data-end="17:10">第 8 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="第九節" data-start="17:15" data-end="18:05">第 9 節</button>
+        <button type="button" class="btn btn-sm btn-ghost preset-btn" data-period="夜間時段" data-start="18:30" data-end="21:00">夜間</button>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'selection:custom_schedule_add' %}" class="form-grid">
+      {% csrf_token %}
+      {% if custom_form.non_field_errors %}
+        <div class="alert alert-error">{{ custom_form.non_field_errors }}</div>
+      {% endif %}
+      <div class="form-group">
+        <label for="id_title">行程名稱 *</label>
+        {{ custom_form.title }}
+        {% if custom_form.title.errors %}<small class="form-error">{{ custom_form.title.errors.0 }}</small>{% endif %}
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="id_weekday">星期 *</label>
+          {{ custom_form.weekday }}
+        </div>
+        <div class="form-group">
+          <label for="id_period">節次標記（選填）</label>
+          {{ custom_form.period }}
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="id_start">開始時間 *</label>
+          {{ custom_form.start }}
+          {% if custom_form.start.errors %}<small class="form-error">{{ custom_form.start.errors.0 }}</small>{% endif %}
+        </div>
+        <div class="form-group">
+          <label for="id_end">結束時間 *</label>
+          {{ custom_form.end }}
+          {% if custom_form.end.errors %}<small class="form-error">{{ custom_form.end.errors.0 }}</small>{% endif %}
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="id_location">地點 / 教室</label>
+          {{ custom_form.location }}
+        </div>
+        <div class="form-group">
+          <label for="id_color">標籤顏色</label>
+          {{ custom_form.color }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="id_note">備註說明</label>
+        {{ custom_form.note }}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">確認新增行程</button>
+      </div>
+    </form>
+  </section>
+
+
+  <section class="panel" id="import-class-section">
+    <h2 class="panel-title">匯入班級課表</h2>
+    <p class="panel-sub">支援學制與系所兩級聯動快速篩選班級，一鍵將全班開課帶入個人課表。</p>
+
+    <div class="form-row-2" style="margin-bottom: 12px;">
+      <div class="form-group">
+        <label for="filter-import-edu">1. 依學制篩選</label>
+        <select id="filter-import-edu" class="input">
+          <option value="">-- 全部學制 --</option>
+          {% for edu in all_edus %}
+            <option value="{{ edu.code }}">{{ edu.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="filter-import-dept">2. 依系所篩選</label>
+        <select id="filter-import-dept" class="input">
+          <option value="">-- 全部系所 --</option>
+          {% for dept in all_depts %}
+            <option value="{{ dept.code }}" data-edu="{{ dept.edu_id }}">{{ dept.edu.name }} - {{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'selection:import_class' %}" class="form-grid">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_import_class">3. 選擇欲匯入的班級 *</label>
+        <select id="id_import_class" name="student_class" class="input" required>
+          <option value="">-- 請選擇班級 --</option>
+          {% for cls in all_classes %}
+            <option value="{{ cls.id }}" data-edu="{{ cls.dept.edu_id }}" data-dept="{{ cls.dept.code }}"
+                    {% if user.student_class_id == cls.id %}selected{% endif %}>
+              {{ cls.full_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="import-hint-box">
+        匯入後，你可以隨時退選不需要的科目、加選其他系所選修，或增添自訂活動。
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit" onclick="return confirm('確定要匯入此班級的所有開課至個人課表嗎？');">開始匯入班級課表</button>
+      </div>
+    </form>
+  </section>
+</div>
+</div>
+{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/course-workspace.css' %}?v=20261018b">{% endblock %}
+{% block footer_js %}
+<script>
+(function() {
+  var friendsModal = document.getElementById('friends-modal');
+  var openFriendsBtn = document.getElementById('open-friends-btn');
+  var closeFriendsBtn = document.getElementById('close-friends-btn');
+  var tabClassmatesBtn = document.getElementById('tab-classmates-btn');
+  var tabOthersBtn = document.getElementById('tab-others-btn');
+  var listClassmates = document.getElementById('list-classmates');
+  var listOthers = document.getElementById('list-others');
+
+  if (openFriendsBtn && friendsModal) {
+    openFriendsBtn.addEventListener('click', function() {
+      friendsModal.removeAttribute('hidden');
+    });
+  }
+  if (closeFriendsBtn && friendsModal) {
+    closeFriendsBtn.addEventListener('click', function() {
+      friendsModal.setAttribute('hidden', '');
+    });
+  }
+  if (friendsModal) {
+    friendsModal.addEventListener('click', function(e) {
+      if (e.target === friendsModal) {
+        friendsModal.setAttribute('hidden', '');
+      }
+    });
+  }
+
+  if (tabClassmatesBtn && tabOthersBtn) {
+    tabClassmatesBtn.addEventListener('click', function() {
+      tabClassmatesBtn.classList.add('is-active');
+      tabOthersBtn.classList.remove('is-active');
+      listClassmates.removeAttribute('hidden');
+      listOthers.setAttribute('hidden', '');
+    });
+    tabOthersBtn.addEventListener('click', function() {
+      tabOthersBtn.classList.add('is-active');
+      tabClassmatesBtn.classList.remove('is-active');
+      listOthers.removeAttribute('hidden');
+      listClassmates.setAttribute('hidden', '');
+    });
+  }
+  var presetBtns = document.querySelectorAll('.preset-btn');
+  var periodInput = document.getElementById('id_period');
+  var startInput = document.getElementById('id_start');
+  var endInput = document.getElementById('id_end');
+
+  presetBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (periodInput) periodInput.value = btn.dataset.period || '';
+      if (startInput) startInput.value = btn.dataset.start || '';
+      if (endInput) endInput.value = btn.dataset.end || '';
+    });
+  });
+  var eduSel = document.getElementById('filter-import-edu');
+  var deptSel = document.getElementById('filter-import-dept');
+  var classSel = document.getElementById('id_import_class');
+
+  function syncCascading() {
+    var edu = eduSel.value;
+    var dept = deptSel.value;
+
+    for (var i = 0; i < deptSel.options.length; i++) {
+      var opt = deptSel.options[i];
+      if (!opt.dataset.edu) continue;
+      opt.hidden = (edu !== '' && opt.dataset.edu !== edu);
+    }
+    if (deptSel.selectedOptions.length && deptSel.selectedOptions[0].hidden) {
+      deptSel.value = '';
+    }
+
+    for (var j = 0; j < classSel.options.length; j++) {
+      var cOpt = classSel.options[j];
+      if (!cOpt.dataset.edu) continue;
+      var matchEdu = (edu === '' || cOpt.dataset.edu === edu);
+      var matchDept = (dept === '' || cOpt.dataset.dept === dept);
+      cOpt.hidden = !(matchEdu && matchDept);
+    }
+    if (classSel.selectedOptions.length && classSel.selectedOptions[0].hidden) {
+      classSel.value = '';
+    }
+  }
+
+  if (eduSel && deptSel && classSel) {
+    eduSel.addEventListener('change', syncCascading);
+    deptSel.addEventListener('change', syncCascading);
+  }
+})();
+</script>
+{% endblock %}

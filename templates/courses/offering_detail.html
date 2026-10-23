@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load course_tags %}
+{% block title %}{{ offering.course.name }} · NTUB 個人課表系統{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="{% url 'courses:browse' %}">課程查詢</a> / {{ offering.course.code }}</p>
+
+<div class="page-head page-head-flex">
+  <div>
+    <h1 class="page-title">{{ offering.course.name }}</h1>
+    <p class="page-sub">{{ offering.course.code }} 序號 {{ offering.serial }} · {{ offering.teacher|default:"教師待定" }}</p>
+  </div>
+  <div class="page-head-actions">
+    {% if user.is_student_role %}
+      {% if not my_selection or my_selection.status != "selected" %}
+        <form method="post" action="{% url 'selection:course_add' offering.id %}">
+          {% csrf_token %}
+          <button class="btn btn-primary btn-lg" type="submit">＋ 加入個人課表</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'selection:course_remove' offering.id %}"
+              onsubmit="return confirm('確定要從個人課表移除這門課嗎？');">
+          {% csrf_token %}
+          <button class="btn btn-danger btn-lg" type="submit">從個人課表移除</button>
+        </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="detail-card">
+  <dl class="meta-grid">
+    <div><dt>課程代號</dt><dd>{{ offering.course.code }}</dd></div>
+    <div><dt>序號</dt><dd>{{ offering.serial }}</dd></div>
+    <div><dt>教師</dt><dd>{{ offering.teacher|default:"待定" }}</dd></div>
+    <div><dt>名額</dt><dd>{{ offering.capacity }} 人</dd></div>
+    <div><dt>排定人數</dt><dd>{{ offering.selected_count }} 人</dd></div>
+    <div><dt>上課時段</dt><dd>{{ offering.slots.count }} 個時段</dd></div>
+  </dl>
+
+  {% if my_selection and my_selection.status == "selected" %}
+    <div class="selection-banner">
+      <span>課表狀態：<span class="badge badge-selected">已在個人課表中</span></span>
+      {% if my_selection.notes %}
+        <span style="margin-left: 12px; color: var(--ink-soft);">我的備註：{{ my_selection.notes }}</span>
+      {% endif %}
+      <a href="{% url 'selection:timetable' %}" style="margin-left: auto;">前往查看我的課表 →</a>
+    </div>
+  {% endif %}
+</div>
+
+<div class="split-cols">
+  <section class="panel">
+    <h2 class="panel-title">上課時間與節次</h2>
+    <table class="data-table">
+      <thead><tr><th>星期</th><th>節次</th><th>時間</th><th>教室</th></tr></thead>
+      <tbody>
+        {% for slot in offering.slots.all %}
+          <tr>
+            <td>星期{{ slot.get_weekday_display }}</td>
+            <td>{{ slot.period }}</td>
+            <td>{{ slot.start|time:"H:i" }} – {{ slot.end|time:"H:i" }}</td>
+            <td>{{ slot.room|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="empty-hint">無時段資料</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2 class="panel-title">開課班級（{{ offering.classes.count }}）</h2>
+    <ul class="tag-list" data-stagger>
+      {% for cls in offering.classes.all %}
+        <li class="tag">{{ cls.dept.edu.code }} {{ cls.dept.name }} · {{ cls.name }}</li>
+      {% empty %}
+        <li class="empty-hint">未指定開課班級</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

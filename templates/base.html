@@ -1,0 +1,192 @@
+{% load static %}
+{% load course_tags %}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#203b49">
+
+
+<link rel="manifest" href="/manifest.json">
+
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NTUB課表">
+<link rel="icon" type="image/svg+xml" href="{% static 'img/timetable-icon.svg' %}">
+<link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+
+<title>{% block title %}NTUB個人課表系統{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261017a">
+{% block extra_css %}{% endblock %}
+<link rel="stylesheet" href="{% static 'css/design-system.css' %}?v=20261018d">
+<link rel="stylesheet" href="{% static 'css/workspaces.css' %}?v=20261018c">
+{% block page_css %}{% endblock %}
+</head>
+<body class="{% if not user.is_authenticated %}is-anonymous{% elif user.is_school_role %}is-school-view{% else %}is-student-view{% endif %}">
+<a class="skip-link" href="#main-content">跳至主內容</a>
+{% block page_layout %}
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="{% url 'courses:home' %}" aria-label="NTUB個人課表系統首頁">
+      <img src="{% static 'img/timetable-icon.svg' %}" alt="" class="workspace-brand-icon" width="30" height="30">
+      <span>NTUB Django</span>
+    </a>
+    <button class="navigation-toggle" data-navigation-toggle aria-expanded="false" aria-controls="main-navigation" aria-label="開啟導覽選單" type="button"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>選單</span></button>
+    <nav id="main-navigation" class="main-nav" aria-label="主要導覽">
+      {% if user.is_authenticated %}
+        {% if user.is_school_role %}
+          <a class="nav-link {% if active_tab == 'dashboard' %}is-active{% endif %}"{% if active_tab == 'dashboard' %} aria-current="page"{% endif %} href="{% url 'courses:home' %}">學校端中心</a>
+          <a class="nav-link {% if active_tab == 'class_timetables' %}is-active{% endif %}"{% if active_tab == 'class_timetables' %} aria-current="page"{% endif %} href="{% url 'courses:class_timetables' %}">全校班級課表</a>
+          <a class="nav-link" href="{% url 'selection:console_offerings' %}">開課名額管理</a>
+          <a class="nav-link {% if active_tab == 'browse' %}is-active{% endif %}"{% if active_tab == 'browse' %} aria-current="page"{% endif %} href="{% url 'courses:browse' %}">全校課程清單</a>
+        {% else %}
+          <a class="nav-link {% if active_tab == 'home' %}is-active{% endif %}"{% if active_tab == 'home' %} aria-current="page"{% endif %} href="{% url 'courses:home' %}">首頁</a>
+          <a class="nav-link {% if active_tab == 'timetable' %}is-active{% endif %}"{% if active_tab == 'timetable' %} aria-current="page"{% endif %} href="{% url 'selection:timetable' %}">個人課表</a>
+          <a class="nav-link {% if active_tab == 'browse' %}is-active{% endif %}"{% if active_tab == 'browse' %} aria-current="page"{% endif %} href="{% url 'courses:browse' %}">課程查詢</a>
+
+        {% endif %}
+
+        <div class="navigation-account"><span>{{ user.display_name|default:user.username }}</span><small>{% if user.is_school_role %}教務／行政{% else %}學生{% endif %}</small></div>
+        <form class="inline-form" method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button class="navigation-logout" type="submit">登出</button>
+        </form>
+      {% else %}
+        <a class="nav-link" href="{% url 'accounts:login' %}">登入</a>
+        <a class="btn btn-primary nav-cta" href="{% url 'accounts:register' %}">註冊</a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+{% include "includes/workspace_sidebar.html" %}
+
+<main class="container main-content" id="main-content" tabindex="-1">
+  {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p>© NTUB Django · NTUB個人課表</p>
+  </div>
+</footer>
+{% endblock page_layout %}
+
+
+{% if user.is_authenticated %}
+<nav class="ios-mobile-tabbar" aria-label="手機快捷導覽列">
+  {% if user.is_student_role %}
+
+    <a href="{% url 'courses:home' %}" class="ios-tab-item {% if active_tab == 'home' %}is-active{% endif %}"{% if active_tab == 'home' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9.5L12 3l9 6.5V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+      <span>首頁</span>
+    </a>
+
+    <a href="{% url 'selection:timetable' %}" class="ios-tab-item {% if active_tab == 'timetable' %}is-active{% endif %}"{% if active_tab == 'timetable' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+        <circle cx="8" cy="14" r="1.2" fill="currentColor"></circle>
+        <circle cx="12" cy="14" r="1.2" fill="currentColor"></circle>
+        <circle cx="16" cy="14" r="1.2" fill="currentColor"></circle>
+        <circle cx="8" cy="18" r="1.2" fill="currentColor"></circle>
+        <circle cx="12" cy="18" r="1.2" fill="currentColor"></circle>
+      </svg>
+      <span>我的課表</span>
+    </a>
+
+    <a href="{% url 'courses:browse' %}" class="ios-tab-item {% if active_tab == 'browse' %}is-active{% endif %}"{% if active_tab == 'browse' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7.5"></circle>
+        <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+      </svg>
+      <span>全校課程</span>
+    </a>
+
+    <a href="{% url 'accounts:profile' %}" class="ios-tab-item {% if active_tab == 'profile' %}is-active{% endif %}"{% if active_tab == 'profile' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>個人中心</span>
+    </a>
+
+  {% else %}
+
+    <a href="{% url 'courses:home' %}" class="ios-tab-item {% if active_tab == 'dashboard' %}is-active{% endif %}"{% if active_tab == 'dashboard' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+        <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+        <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+        <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+      </svg>
+      <span>教務中心</span>
+    </a>
+    <a href="{% url 'courses:class_timetables' %}" class="ios-tab-item {% if active_tab == 'class_timetables' %}is-active{% endif %}"{% if active_tab == 'class_timetables' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+        <path d="M9 12h6"></path>
+        <path d="M9 16h6"></path>
+      </svg>
+      <span>班級課表</span>
+    </a>
+    <a href="{% url 'selection:console_offerings' %}" class="ios-tab-item {% if 'console' in request.resolver_match.url_name %}is-active{% endif %}"{% if 'console' in request.resolver_match.url_name %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"></line>
+        <line x1="12" y1="20" x2="12" y2="4"></line>
+        <line x1="6" y1="20" x2="6" y2="14"></line>
+      </svg>
+      <span>名額管理</span>
+    </a>
+    <a href="{% url 'courses:browse' %}" class="ios-tab-item {% if active_tab == 'browse' %}is-active{% endif %}"{% if active_tab == 'browse' %} aria-current="page"{% endif %}>
+      <svg class="ios-tab-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+      </svg>
+      <span>課程清單</span>
+    </a>
+  {% endif %}
+</nav>
+{% endif %}
+
+<script>
+(function () {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js').then(function(reg) {
+        console.log('[PWA] ServiceWorker registered:', reg.scope);
+      }).catch(function(err) {
+        console.warn('[PWA] ServiceWorker registration failed:', err);
+      });
+    });
+  }
+  document.documentElement.classList.add('js');
+  var staggers = document.querySelectorAll('[data-stagger]');
+  for (var s = 0; s < staggers.length; s++) {
+    var kids = staggers[s].children;
+    var n = Math.min(kids.length, 8);
+    for (var k = 0; k < n; k++) kids[k].style.setProperty('--i', k);
+  }
+
+
+})();
+</script>
+{% block footer_js %}{% endblock %}
+<script src="{% static 'js/navigation.js' %}?v=20261018b" defer></script>
+</body>
+</html>

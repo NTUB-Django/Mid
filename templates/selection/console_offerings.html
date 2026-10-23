@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}名額管理 · NTUB 選課系統{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">名額管理</h1>
+  <p class="page-sub">調整每門開課的名額上限（直接影響分發抽籤結果）</p>
+</div>
+
+<form method="get" class="filter-bar">
+  <div class="filter-field filter-q">
+    <input type="text" name="q" placeholder="搜尋課程 / 教師…" value="{{ q }}">
+  </div>
+  <button class="btn btn-primary" type="submit">搜尋</button>
+  {% if q %}<a class="btn btn-outline" href="{% url 'selection:console_offerings' %}">清除</a>{% endif %}
+</form>
+
+<div class="result-info">共 {{ page_obj.paginator.count }} 門開課</div>
+
+{% if page_obj.object_list %}
+<div class="panel">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>課程</th><th>教師</th><th>時段</th><th>預選 / 正取</th><th class="num">名額</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in page_obj.object_list %}
+      <tr>
+        <td>
+          <a href="{% url 'courses:offering_detail' o.id %}"><strong>{{ o.course.name }}</strong></a>
+          <br><span class="text-muted">{{ o.course.code }} 序{{ o.serial }}</span>
+        </td>
+        <td>{{ o.teacher|default:"—" }}</td>
+        <td class="text-muted">{{ o.slots.count }} 時段</td>
+        <td><span class="num">{{ o.pre_count }}</span> / {{ o.selected_count }}</td>
+        <td class="num">
+          <form method="post" action="{% url 'selection:console_capacity' o.id %}" class="inline-form" id="cap-form-{{ o.id }}">
+            {% csrf_token %}
+            <input class="input-sm num" type="number" name="capacity" value="{{ o.capacity }}" min="0" max="9999">
+            <button class="btn btn-sm btn-outline" type="submit">更新</button>
+          </form>
+        </td>
+        <td><a class="btn btn-sm btn-outline" href="{% url 'courses:offering_detail' o.id %}">詳情</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" with page_obj=page_obj %}
+{% else %}
+<p class="empty-hint">查無符合條件的開課。</p>
+{% endif %}
+{% endblock %}

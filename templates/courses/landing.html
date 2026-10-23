@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}NTUB Django｜課表與選課{% endblock %}
+{% block page_layout %}
+<div class="site-landing">
+<header class="site-header"><div class="site-header-inner">
+<a class="site-brand" href="{% url 'courses:home' %}"><img src="{% static 'img/timetable-icon.svg' %}" alt="">NTUB Django</a>
+<button class="navigation-toggle" data-navigation-toggle aria-expanded="false" aria-controls="landing-navigation" aria-label="開啟導覽選單" type="button"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>選單</span></button>
+<nav class="landing-navigation" id="landing-navigation" aria-label="主要導覽"><a href="{% url 'courses:browse' %}">課程查詢</a><a href="#features">使用方式</a><a href="{% url 'accounts:login' %}">登入</a><a class="site-button" href="{% url 'accounts:register' %}">建立帳號</a></nav>
+</div></header>
+<main id="main-content" tabindex="-1">
+<section class="site-intro"><div class="site-intro-inner">
+<div class="site-copy"><p>國立臺北商業大學 · 課表服務</p><h1>這學期，<br>安排好了。</h1><p>查課程、排課表，也把社團和自己的時間放進來。每天要去哪裡，一眼就能找到。</p><div class="site-actions"><a class="site-button site-button-light" href="{% url 'accounts:login' %}">開啟我的課表 →</a><a href="{% url 'courses:browse' %}">先找找課程</a></div></div>
+<div class="site-preview" aria-label="課表畫面範例，非個人資料"><div class="site-preview-head"><strong>我的一週</strong><span>課表示意</span></div><div class="site-preview-tabs"><span>我的課表</span><span>個人行程</span></div><div class="site-week"><span></span><b>一</b><b>二</b><b>三</b><b>四</b><b>五</b><small>09:00</small><i>會計學<small>09:00 – 11:00</small></i><span></span><i class="green">經濟學<small>09:00 – 11:00</small></i><span></span><span></span><small>11:00</small><span></span><i class="violet">英文<small>11:00 – 12:00</small></i><span></span><i>統計學<small>11:00 – 12:00</small></i><span></span><small>13:00</small><i class="green">社團活動<small>13:00 – 15:00</small></i><span></span><i>行銷學<small>13:00 – 15:00</small></i><span></span><span></span></div><div class="site-preview-foot">課程與個人行程，放在同一個地方。</div></div>
+</div></section>
+<div class="site-data"><span><strong>{{ landing_stats.classes }}</strong> 個班級</span><span><strong>{{ landing_stats.courses }}</strong> 門課程</span><span><strong>{{ landing_stats.offerings }}</strong> 筆開課資料</span><a href="{% url 'courses:browse' %}">瀏覽本學期課程 →</a></div>
+<section class="site-features" id="features"><div><h2>從找課，到排好一週。</h2><p>先匯入班級課表，再依自己的安排調整。</p></div><div class="site-feature-grid"><article><h3>找合適的課</h3><p>依課名、系所和學制查詢，查看教師、教室及上課時段。</p><a href="{% url 'courses:browse' %}">查詢課程 →</a></article><article><h3>安排課程與生活</h3><p>班級課程快速帶入，搭配衝堂檢查，把個人活動一起排好。</p><a href="{% url 'selection:timetable' %}">查看課表 →</a></article><article><h3>帶著課表出門</h3><p>保留課程、教室與行程資訊，開啟列印版，或存成 PDF 隨時查閱。</p><a href="{% url 'selection:timetable_print' %}">開啟列印課表 →</a></article></div></section>
+</main><footer class="site-footer"><strong>NTUB Django</strong><span>課程與生活，各有安排。</span><a href="{% url 'accounts:login' %}">登入系統</a></footer>
+</div>
+{% endblock %}
