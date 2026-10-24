@@ -32,7 +32,7 @@ function Find-Python {
         try {
             $program = $candidate[0]
             $arguments = @($candidate | Select-Object -Skip 1)
-            $result = & $program @arguments -c 'import sys; sys.exit(sys.version_info < (3,10)); print(sys.executable)' 2>$null
+            $result = & $program @arguments -c 'import sys; assert sys.version_info >= (3,10); print(sys.executable)' 2>$null
             if ($LASTEXITCODE -eq 0 -and $result -and (Test-Path -LiteralPath ([string]$result))) {
                 return ([string]$result).Trim()
             }
@@ -118,7 +118,7 @@ try {
     if ([string]::IsNullOrWhiteSpace($portText)) { $portText = '8000' }
     if ($portText -notmatch '^\d{4,5}$' -or [int]$portText -lt 1024 -or [int]$portText -gt 65535) { throw '連接埠必須介於 1024 與 65535。' }
     $port = [int]$portText
-    $listener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, $port)
+    $listener = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback, $port)
     try { $listener.Start() } catch { throw "連接埠 $port 已被使用，請重開此檔並選其他連接埠。" } finally { $listener.Stop() }
     $publicUrl = $null
     $credential = $null
@@ -129,7 +129,7 @@ try {
         Write-Host "請先在 Cloudflare 將此網域的服務設定為 http://localhost:$port 。本程式不會建立 DNS 或發布路由。"
         $secureToken = Read-Host '請輸入既有 Tunnel token（不會顯示或存入檔案）' -AsSecureString
         if ($secureToken.Length -lt 80) { throw 'Tunnel token 長度不正確。' }
-        $credential = New-Object Management.Automation.PSCredential('tunnel', $secureToken)
+        $credential = New-Object System.Management.Automation.PSCredential('tunnel', $secureToken)
         $cloudflared = Get-Cloudflared
         $publicUrl = "https://$domain"
         $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,$domain"
