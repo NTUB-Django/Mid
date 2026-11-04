@@ -1,8 +1,99 @@
 from django.contrib.auth import authenticate
 from django.test import Client, TestCase
 from django.urls import reverse
+import re
 
 from .models import GroupMembership, SharingGroup, User
+
+
+class PortalCsrfTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.student = User.objects.create_user(username="csrf_student", email="csrf-student@example.com", password="Portal-test-password-905")
+        cls.school = User.objects.create_user(username="csrf_school", email="csrf-school@example.com", password="Portal-test-password-905", role=User.Role.SCHOOL)
+        cls.admin = User.objects.create_superuser(username="admin", password="Portal-test-password-905", role=User.Role.ADMIN)
+
+    def setUp(self):
+        self.browser = Client(enforce_csrf_checks=True)
+
+    def form_token(self, path):
+        response = self.browser.get(path, secure=True)
+        self.assertEqual(response.status_code, 200)
+        return re.search(r'name="csrfmiddlewaretoken" value="([A-Za-z0-9]+)"', response.content.decode()).group(1)
+
+    def submit_login(self, path, token, identifier):
+        from captcha.models import CaptchaStore
+        key = CaptchaStore.generate_key()
+        answer = CaptchaStore.objects.get(hashkey=key).response
+        return self.browser.post(path, {
+            "csrfmiddlewaretoken": token, "username": identifier,
+            "password": "Portal-test-password-905", "captcha_0": key, "captcha_1": answer,
+        }, secure=True, HTTP_ORIGIN="https://testserver")
+
+    def test_student_login_does_not_invalidate_an_open_school_login_form(self):
+        school_token = self.form_token("/school/login/")
+        student_token = self.form_token("/accounts/login/")
+        self.assertEqual(self.submit_login("/accounts/login/", student_token, self.student.email).status_code, 302)
+        response = self.submit_login("/school/login/", school_token, self.school.email)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/school/")
+        self.assertEqual(self.browser.get("/school/", secure=True).status_code, 200)
+        self.assertEqual(self.browser.get("/selection/timetable/", secure=True).status_code, 200)
+
+    def test_school_login_does_not_invalidate_an_open_admin_login_form(self):
+        admin_token = self.form_token("/admin/login/")
+        school_token = self.form_token("/school/login/")
+        self.assertEqual(self.submit_login("/school/login/", school_token, self.school.email).status_code, 302)
+        self.assertEqual(self.submit_login("/admin/login/", admin_token, "admin").status_code, 302)
+        self.assertEqual(self.browser.get("/admin/", secure=True).status_code, 200)
+        self.assertEqual(self.browser.get("/school/", secure=True).status_code, 200)
+
+    def test_csrf_token_from_another_portal_is_rejected(self):
+        school_token = self.form_token("/school/login/")
+        self.form_token("/accounts/login/")
+        response = self.submit_login("/accounts/login/", school_token, self.student.email)
+        self.assertEqual(response.status_code, 403)
+
+    def test_missing_token_has_a_safe_uncached_retry_page(self):
+        response = self.submit_login("/school/login/", "", self.school.email)
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "重新開啟學校端登入", status_code=403)
+        self.assertNotContains(response, "DEBUG=True", status_code=403)
+        self.assertNotContains(response, "Portal-test-password-905", status_code=403)
+        self.assertIn("no-store", response["Cache-Control"])
+
+    def test_untrusted_origin_stays_rejected_and_does_not_log_in(self):
+        token = self.form_token("/school/login/")
+        response = self.browser.post("/school/login/", {"csrfmiddlewaretoken": token}, secure=True, HTTP_ORIGIN="https://untrusted.example")
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.browser.get("/school/", secure=True).status_code, 302)
+
+    def test_legacy_shared_cookie_cannot_replace_a_portal_session(self):
+        token = self.form_token("/school/login/")
+        self.browser.cookies["csrftoken"] = "x" * 32
+        self.assertEqual(self.submit_login("/school/login/", token, self.school.email).status_code, 302)
+
+    def test_expired_session_can_recover_through_a_fresh_login_form(self):
+        stale = self.form_token("/school/login/")
+        self.browser.cookies.pop("mid_school_session")
+        rejected = self.submit_login("/school/login/", stale, self.school.email)
+        self.assertEqual(rejected.status_code, 403)
+        fresh = self.form_token("/school/login/")
+        self.assertEqual(self.submit_login("/school/login/", fresh, self.school.email).status_code, 302)
+
+    def test_school_logout_does_not_invalidate_a_student_form(self):
+        token = self.form_token("/accounts/login/")
+        self.assertEqual(self.submit_login("/accounts/login/", token, self.student.email).status_code, 302)
+        school_token = self.form_token("/school/login/")
+        self.assertEqual(self.submit_login("/school/login/", school_token, self.school.email).status_code, 302)
+        student_form = self.form_token("/accounts/profile/")
+        logout_token = self.form_token("/school/")
+        self.assertEqual(self.browser.post("/school/logout/", {"csrfmiddlewaretoken": logout_token}, secure=True, HTTP_ORIGIN="https://testserver").status_code, 302)
+        response = self.browser.post("/accounts/profile/", {
+            "csrfmiddlewaretoken": student_form, "form_kind": "email", "email": self.student.email,
+            "current_password": "Portal-test-password-905",
+        }, secure=True, HTTP_ORIGIN="https://testserver")
+        self.assertEqual(response.status_code, 302)
 
 
 class PortalSessionTests(TestCase):

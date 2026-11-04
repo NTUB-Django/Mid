@@ -117,6 +117,10 @@ STORAGES = {
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = ['accounts.backends.UsernameOrEmailBackend']
 SESSION_COOKIE_NAME = 'mid_student_session'
+# Each portal already has its own session. Keep its CSRF secret in that same
+# session so a login in another portal cannot invalidate an open form.
+CSRF_USE_SESSIONS = True
+CSRF_FAILURE_VIEW = 'config.views.csrf_failure'
 
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'courses:home'

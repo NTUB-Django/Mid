@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}請重新開啟登入頁｜NTUB Django{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/signin.css' %}?v=20261029f">{% endblock %}
+{% block page_layout %}
+<div class="signin-page">
+  <header class="signin-header"><a class="signin-brand" href="/"><img src="{% static 'img/timetable-icon.svg' %}" alt="" width="32" height="32">NTUB Django</a></header>
+  <main id="main-content" class="signin-main" tabindex="-1">
+    <section class="signin-form-panel" aria-labelledby="csrf-title">
+      <h1 id="csrf-title">請重新開啟登入頁</h1>
+      <p class="signin-intro" role="alert">這個頁面的安全驗證已過期，或與目前的登入狀態不一致。本次操作尚未送出。</p>
+      <p class="signin-help">請使用下方按鈕重新取得登入表單，再輸入帳號、密碼與圖片驗證碼。若仍反覆出現，請確認此網站允許使用 Cookie。</p>
+      <a class="btn btn-primary" href="{{ login_url }}">重新開啟{{ portal_name }}登入</a>
+    </section>
+  </main>
+  <footer class="signin-footer">NTUB Django · 課表與選課</footer>
+</div>
+{% endblock %}
